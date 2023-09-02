@@ -87,6 +87,10 @@ impl<G: Group> R1CSShape<G> {
     B: &[(usize, usize, G::Scalar)],
     C: &[(usize, usize, G::Scalar)],
   ) -> Result<R1CSShape<G>, NovaError> {
+    // checks:
+    // - such as A[i].0 should < num_cons, num_cons is the row amount of A.
+    // - A[i].1 should < num_io + num_vars + 1, which is the column amount of A.
+    // - public inputs/outputs(num_io) should be even.
     let is_valid = |num_cons: usize,
                     num_vars: usize,
                     num_io: usize,
@@ -135,6 +139,10 @@ impl<G: Group> R1CSShape<G> {
 
   // Checks regularity conditions on the R1CSShape, required in Spartan-class SNARKs
   // Panics if num_cons, num_vars, or num_io are not powers of two, or if num_io > num_vars
+  //
+  // checks:
+  // - num_cons, num_vars, num_io should be 2^n.
+  // - num_io should < num_vars
   #[inline]
   pub(crate) fn check_regular_shape(&self) {
     assert_eq!(self.num_cons.next_power_of_two(), self.num_cons);
@@ -231,6 +239,7 @@ impl<G: Group> R1CSShape<G> {
     assert_eq!(U.X.len(), self.num_io);
 
     // verify if Az * Bz = u*Cz
+    // actually only verify if Az * Bz = Cz
     let res_eq: bool = {
       let z = [W.W.clone(), vec![G::Scalar::ONE], U.X.clone()].concat();
       let (Az, Bz, Cz) = self.multiply_vec(&z)?;
