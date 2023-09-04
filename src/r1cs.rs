@@ -274,28 +274,37 @@ impl<G: Group> R1CSShape<G> {
     U2: &R1CSInstance<G>,
     W2: &R1CSWitness<G>,
   ) -> Result<(Vec<G::Scalar>, Commitment<G>), NovaError> {
+    // cal Az1, Bz1, Cz1
     let (AZ_1, BZ_1, CZ_1) = {
       let Z1 = [W1.W.clone(), vec![U1.u], U1.X.clone()].concat();
       self.multiply_vec(&Z1)?
     };
 
+    // cal Az2, Bz2, Cz2
     let (AZ_2, BZ_2, CZ_2) = {
       let Z2 = [W2.W.clone(), vec![G::Scalar::ONE], U2.X.clone()].concat();
       self.multiply_vec(&Z2)?
     };
 
+    // cal Az1 * Bz2
     let AZ_1_circ_BZ_2 = (0..AZ_1.len())
       .into_par_iter()
       .map(|i| AZ_1[i] * BZ_2[i])
       .collect::<Vec<G::Scalar>>();
+
+    // cal Az2 * Bz1
     let AZ_2_circ_BZ_1 = (0..AZ_2.len())
       .into_par_iter()
       .map(|i| AZ_2[i] * BZ_1[i])
       .collect::<Vec<G::Scalar>>();
+
+    // cal u1 Cz2
     let u_1_cdot_CZ_2 = (0..CZ_2.len())
       .into_par_iter()
       .map(|i| U1.u * CZ_2[i])
       .collect::<Vec<G::Scalar>>();
+
+    // cal u2 Cz1
     let u_2_cdot_CZ_1 = (0..CZ_1.len())
       .into_par_iter()
       .map(|i| CZ_1[i])
@@ -314,6 +323,7 @@ impl<G: Group> R1CSShape<G> {
     Ok((T, comm_T))
   }
 
+  // make witness.len() = M.colume.len() = 2^n
   /// Pads the `R1CSShape` so that the number of variables is a power of two
   /// Renumbers variables to accomodate padded variables
   pub fn pad(&self) -> Self {
@@ -520,6 +530,7 @@ impl<G: Group> RelaxedR1CSInstance<G> {
     }
   }
 
+  // actually Folds an incoming `R1CSInstance` into the current one
   /// Folds an incoming `RelaxedR1CSInstance` into the current one
   pub fn fold(
     &self,
@@ -575,5 +586,53 @@ impl<G: Group> AbsorbInROTrait<G> for RelaxedR1CSInstance<G> {
         ro.absorb(scalar_as_base::<G>(limb));
       }
     }
+  }
+}
+
+#[cfg(test)]
+mod tests {
+  use super::*;
+  use pasta_curves::pallas::{Point, Scalar};
+
+  // extend the new column in the middle of matrix with 0 value, to make num_vars(witness) become 2^n
+  // extend the new row at the end of matrix with 0 value, to make num_cons become 2^n
+  #[test]
+  fn test_pad() {
+    let shape: R1CSShape<Point> = R1CSShape::new(
+      5,
+      7,
+      6,
+      &[
+        (0, 0, Scalar::ONE),
+        (0, 6, Scalar::ONE),
+        (0, 8, Scalar::ONE),
+        (0, 9, Scalar::ONE),
+      ],
+      &[(1, 1, Scalar::ONE), (1, 8, Scalar::ONE)],
+      &[(2, 2, Scalar::ONE), (2, 7, Scalar::ONE)],
+    )
+    .unwrap();
+
+    println!("{:?}", shape);
+
+    let shape = shape.pad();
+    println!("{:?}", shape);
+    assert_eq!(
+      shape,
+      R1CSShape::new(
+        8,
+        8,
+        6,
+        &[
+          (0, 0, Scalar::ONE),
+          (0, 6, Scalar::ONE),
+          (0, 9, Scalar::ONE),
+          (0, 10, Scalar::ONE),
+        ],
+        &[(1, 1, Scalar::ONE), (1, 9, Scalar::ONE)],
+        &[(2, 2, Scalar::ONE), (2, 8, Scalar::ONE)],
+      )
+      .unwrap()
+    )
   }
 }
