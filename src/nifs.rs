@@ -42,6 +42,7 @@ impl<G: Group> NIFS<G> {
     W2: &R1CSWitness<G>,
   ) -> Result<(NIFS<G>, (RelaxedR1CSInstance<G>, RelaxedR1CSWitness<G>)), NovaError> {
     // initialize a new RO
+    // Random Oracle
     let mut ro = G::RO::new(ro_consts.clone(), NUM_FE_FOR_RO);
 
     // append the digest of pp to the transcript
@@ -58,6 +59,7 @@ impl<G: Group> NIFS<G> {
     comm_T.absorb_in_ro(&mut ro);
 
     // compute a challenge from the RO
+    // r = ρ(ro_consts, pp_digest, U1, U2, comm_T)
     let r = ro.squeeze(NUM_CHALLENGE_BITS);
 
     // fold the instance using `r` and `comm_T`
@@ -102,6 +104,7 @@ impl<G: Group> NIFS<G> {
     comm_T.absorb_in_ro(&mut ro);
 
     // compute a challenge from the RO
+    // r = ρ(ro_consts, pp_digest, U1, U2, comm_T)
     let r = ro.squeeze(NUM_CHALLENGE_BITS);
 
     // fold the instance using `r` and `comm_T`
