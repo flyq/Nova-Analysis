@@ -130,11 +130,13 @@ mod tests {
     x_val: Option<Scalar>,
   ) -> Result<(), SynthesisError> {
     // Consider a cubic equation: `x^3 + x + 5 = y`, where `x` and `y` are respectively the input and output.
+
     let x = AllocatedNum::alloc(cs.namespace(|| "x"), || Ok(x_val.unwrap()))?;
     let _ = x.inputize(cs.namespace(|| "x is input"));
 
     let x_sq = x.square(cs.namespace(|| "x_sq"))?;
     let x_cu = x_sq.mul(cs.namespace(|| "x_cu"), &x)?;
+    // y = x^3 + x + 5
     let y = AllocatedNum::alloc(cs.namespace(|| "y"), || {
       Ok(x_cu.get_value().unwrap() + x.get_value().unwrap() + Scalar::from(5u64))
     })?;
@@ -385,5 +387,19 @@ mod tests {
     test_tiny_r1cs_with::<pasta_curves::pallas::Point>();
     test_tiny_r1cs_with::<crate::provider::bn256_grumpkin::bn256::Point>();
     test_tiny_r1cs_with::<crate::provider::secp_secq::secp256k1::Point>();
+  }
+
+  #[test]
+  fn test_ro_bits() {
+    let ro_consts =
+      <<G as Group>::RO as ROTrait<<G as Group>::Base, <G as Group>::Scalar>>::Constants::default();
+
+    let mut ro = <pasta_curves::pallas::Point as Group>::RO::new(ro_consts, NUM_FE_FOR_RO);
+    ro.absorb(scalar_as_base::<G>(
+      <pasta_curves::Ep as Group>::Scalar::from(1),
+    ));
+
+    // let r = ro.squeeze(NUM_CHALLENGE_BITS);
+    // println!("r: {:?}", r);
   }
 }
