@@ -11,14 +11,12 @@
 #![allow(clippy::type_complexity)]
 #![forbid(unsafe_code)]
 
-// private modules
-mod bellpepper;
-mod circuit;
-mod constants;
-mod nifs;
-mod r1cs;
+pub mod bellpepper;
+pub mod circuit;
+pub mod constants;
+pub mod nifs;
+pub mod r1cs;
 
-// public modules
 pub mod errors;
 pub mod gadgets;
 pub mod provider;
